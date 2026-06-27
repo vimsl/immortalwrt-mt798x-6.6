@@ -1,0 +1,105 @@
+
+<%#
+/usr/lib/lua/luci/view/aiqos/status.htm
+Standalone status dashboard
+%>
+
+<%+header%>
+
+<style>
+.aiqos-dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 20px; }
+.aiqos-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.aiqos-card .label { font-size: 12px; color: #666; margin-bottom: 4px; }
+.aiqos-card .value { font-size: 28px; font-weight: 700; color: #1a1a1a; }
+.aiqos-card .sub { font-size: 11px; color: #999; margin-top: 2px; }
+.aiqos-card.good .value { color: #2e7d32; }
+.aiqos-card.warn .value { color: #f57c00; }
+.aiqos-card.bad .value { color: #c62828; }
+</style>
+
+<h2>5G AI 信号优化 - 状态仪表盘</h2>
+
+<div class="aiqos-dashboard" id="status-cards">
+    <div class="aiqos-card" id="card-sinr">
+        <div class="label">信号质量</div>
+        <div class="value">--</div>
+        <div class="sub">SINR dB / RSRP dBm</div>
+    </div>
+    <div class="aiqos-card" id="card-bandwidth">
+        <div class="label">当前带宽</div>
+        <div class="value">--</div>
+        <div class="sub">CAKE 动态调整</div>
+    </div>
+    <div class="aiqos-card" id="card-latency">
+        <div class="label">网络延迟</div>
+        <div class="value">--</div>
+        <div class="sub">OWD P99</div>
+    </div>
+    <div class="aiqos-card" id="card-uptime">
+        <div class="label">运行时间</div>
+        <div class="value">--</div>
+        <div class="sub">aiqosd</div>
+    </div>
+</div>
+
+<p style="margin-top:16px;color:#666;">
+    <em>返回 <a href="<%=luci.dispatcher.build_url("admin", "services", "aiqos")%>">设置页面</a> 进行开关配置。</em>
+</p>
+
+<script>
+(function() {
+    function loadStatus() {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', '<%=luci.dispatcher.build_url("admin", "services", "aiqos", "status_json")%>', true);
+        xhr.onload = function() {
+            if (xhr.status === 200) {
+                try {
+                    var data = JSON.parse(xhr.responseText);
+                    updateCards(data);
+                } catch(e) {}
+            }
+        };
+        xhr.send();
+    }
+
+    function updateCards(data) {
+        var sinrCard = document.getElementById('card-sinr');
+        var bwCard = document.getElementById('card-bandwidth');
+        var latCard = document.getElementById('card-latency');
+        var upCard = document.getElementById('card-uptime');
+
+        if (data.sinr && data.sinr !== 'N/A') {
+            sinrCard.querySelector('.value').textContent = data.sinr + ' dB';
+            var s = parseFloat(data.sinr);
+            sinrCard.className = 'aiqos-card ' + (s >= 15 ? 'good' : s >= 5 ? 'warn' : 'bad');
+            sinrCard.querySelector('.sub').textContent = 'SINR ' + data.sinr + 'dB / 系数=' + data.sinr_coeff;
+        } else {
+            sinrCard.querySelector('.value').textContent = '--';
+            sinrCard.className = 'aiqos-card';
+        }
+
+        if (data.bandwidth && data.bandwidth !== 'N/A') {
+            bwCard.querySelector('.value').textContent = data.bandwidth;
+        } else {
+            bwCard.querySelector('.value').textContent = '--';
+        }
+
+        if (data.latency && data.latency !== 'N/A') {
+            latCard.querySelector('.value').textContent = data.latency;
+        } else {
+            latCard.querySelector('.value').textContent = '--';
+        }
+
+        if (data.uptime && data.uptime !== 'N/A') {
+            upCard.querySelector('.value').textContent = data.uptime;
+        } else {
+            upCard.querySelector('.value').textContent = '--';
+        }
+    }
+
+    setInterval(loadStatus, 2000);
+    loadStatus();
+})();
+</script>
+
+<%+footer%>

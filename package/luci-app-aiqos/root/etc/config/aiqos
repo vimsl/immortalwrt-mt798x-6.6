@@ -1,0 +1,18 @@
+
+config preset 'preset'
+	option mode 'normal'
+
+config switches 'switches'
+	option enable_cake '1'
+	option enable_sinr '1'
+	option enable_wifi '0'
+	option enable_ack '0'
+	option enable_night_lock '0'
+	option enable_ebpf '0'
+	option enable_ai '0'
+
+config advanced 'advanced'
+	option show_advanced '0'
+	option poll_interval '2'
+	option min_bandwidth '5'
+	option lock_freq ''

@@ -86,6 +86,26 @@ EOF
           echo "=== Verify H5000M selected ==="
           grep "hiveton_h5000m" .config
 
+      - name: Overlay local luci-app-aiqos (HNAT coexistence + bugfixes)
+        working-directory: immortalwrt
+        run: |
+          echo "=== Removing feed version of luci-app-aiqos (from QModem) ==="
+          rm -rf feeds/qmodem/luci-app-aiqos/ 2>/dev/null || true
+          rm -rf feeds/luci/applications/luci-app-aiqos/ 2>/dev/null || true
+
+          echo "=== Copying local luci-app-aiqos (v1.0.1 with HNAT coexistence + bugfixes) ==="
+          cp -rf $GITHUB_WORKSPACE/package/luci-app-aiqos package/luci-app-aiqos
+          cp -rf $GITHUB_WORKSPACE/package/luci-app-aiqos feeds/qmodem/luci-app-aiqos
+
+          echo "=== Re-install feeds ==="
+          ./scripts/feeds install -a -f -p qmodem 2>/dev/null || true
+          ./scripts/feeds install luci-app-aiqos 2>/dev/null || true
+
+          echo "=== Verify local package is used ==="
+          ls -la package/luci-app-aiqos/Makefile
+          ls -la feeds/qmodem/luci-app-aiqos/Makefile
+          grep "VERSION" package/luci-app-aiqos/Makefile | head -1
+
       - name: Download sources
         working-directory: immortalwrt
         run: make download -j$(nproc) || echo "Some downloads failed, will retry during build"
