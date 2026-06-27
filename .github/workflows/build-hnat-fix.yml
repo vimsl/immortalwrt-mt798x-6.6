@@ -18,6 +18,9 @@ jobs:
           swap-size-mb: 1024
           remove-dotnet: 'false'
 
+      - name: Checkout local repo (for luci-app-aiqos overlay)
+        uses: actions/checkout@v4
+
       - name: Install build dependencies
         run: |
           for i in 1 2 3; do sudo apt update -y && break || sleep 10; done
