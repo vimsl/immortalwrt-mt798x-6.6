@@ -1,0 +1,119 @@
+name: H5000M HNAT Fix (usb0) + AIQoS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    env:
+      TZ: Asia/Shanghai
+
+    steps:
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 10240
+          swap-size-mb: 1024
+          remove-dotnet: 'false'
+
+      - name: Install build dependencies
+        run: |
+          sudo apt update -y
+          sudo apt install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential \
+            bzip2 ccache clang cmake cpio curl device-tree-compiler ecj fastjar flex gawk gettext gcc-multilib \
+            g++-multilib git gperf haveged help2man intltool libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev \
+            libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool lld lrzsz \
+            mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python3 python3-pip python3-ply \
+            python3-docutils qemu-utils re2c rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl \
+            unzip vim wget xmlto xxd zlib1g-dev
+
+      - name: Clone ImmortalWrt source
+        run: |
+          git clone -b openwrt-25.12 --single-branch --filter=blob:none \
+            https://github.com/immortalwrt/immortalwrt immortalwrt
+          cd immortalwrt
+
+          echo "=== Apply H5000M support patch (PR#2166) ==="
+          curl -L https://github.com/immortalwrt/immortalwrt/pull/2166.diff -o h5000m-pr2166.diff
+          patch -p1 < h5000m-pr2166.diff || echo "PR2166 patch applied (warnings may be ok)"
+
+          echo "=== Apply HNAT ext-devices usb0 patch ==="
+          DTS_FILE=$(find target/linux/mediatek -name "*.dts" | xargs grep -l "hiveton\|h5000m\|H5000M" 2>/dev/null | head -1)
+          if [ -z "$DTS_FILE" ]; then
+            DTS_FILE=$(find target/linux/mediatek -name "mt7987*.dts" | xargs grep -l "hnat" 2>/dev/null | head -1)
+          fi
+          if [ -n "$DTS_FILE" ]; then
+            echo "Found DTS: $DTS_FILE"
+            if grep -q "hnat\s*{" "$DTS_FILE"; then
+              sed -i '/hnat\s*{/a\\t\text-devices = "usb0";' "$DTS_FILE"
+              echo "Added ext-devices = usb0"
+            else
+              echo '&hnat { ext-devices = "usb0"; };' >> "$DTS_FILE"
+              echo "Created hnat node with ext-devices"
+            fi
+            grep -A3 "hnat" "$DTS_FILE" | head -6
+          else
+            echo "::warning::No DTS with hnat found, creating dtso"
+            mkdir -p target/linux/mediatek/files-6.6/arch/arm64/boot/dts/mediatek
+            printf '&hnat {\n\text-devices = "usb0";\n};' > target/linux/mediatek/files-6.6/arch/arm64/boot/dts/mediatek/mt7987-hnat-usb0.dtso
+          fi
+
+          echo "=== Add feeds ==="
+          cat feeds.conf.default > feeds.conf
+          echo "" >> feeds.conf
+          echo "src-git qmodem https://github.com/FUjr/QModem.git;main" >> feeds.conf
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+          ./scripts/feeds install -a -f -p qmodem
+
+      - name: Configure build
+        working-directory: immortalwrt
+        run: |
+          # Start with known H5000M config from auto-build project
+          cat > .config << 'EOF'
+CONFIG_TARGET_mediatek=y
+CONFIG_TARGET_mediatek_filogic=y
+CONFIG_TARGET_mediatek_filogic_DEVICE_hiveton_h5000m=y
+CONFIG_PACKAGE_kmod-usb-net-qmi-wwan=y
+CONFIG_PACKAGE_kmod-sched-cake=y
+CONFIG_PACKAGE_cake-autorate=y
+CONFIG_PACKAGE_aiqosd=y
+CONFIG_PACKAGE_luci-app-aiqos=y
+EOF
+          make defconfig
+          echo "=== Verify H5000M selected ==="
+          grep "hiveton_h5000m" .config
+
+      - name: Download sources
+        working-directory: immortalwrt
+        run: make download -j$(nproc) || echo "Some downloads failed, will retry during build"
+
+      - name: Build firmware
+        working-directory: immortalwrt
+        run: make -j$(nproc) V=s 2>&1 | tee build.log
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p release
+          find immortalwrt/bin/targets/mediatek/filogic -name "*h5000m*sysupgrade*" -exec cp {} release/ \;
+          find immortalwrt/bin/targets/mediatek/filogic -name "*h5000m*initramfs*" -exec cp {} release/ \;
+          find immortalwrt/bin/targets/mediatek/filogic -name "*h5000m*.manifest" -exec cp {} release/ \;
+          find immortalwrt/bin/targets/mediatek/filogic -name "sha256sums" -exec cp {} release/ \;
+          ls -la release/
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: h5000m-hnat-usb0-firmware
+          path: release/
+          retention-days: 30
+
+      - name: Upload build log (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: immortalwrt/build.log
+          retention-days: 7
