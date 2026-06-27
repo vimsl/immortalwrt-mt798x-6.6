@@ -81,7 +81,18 @@ jobs:
           echo 'CONFIG_PACKAGE_cake-autorate=y' >> .config
           echo 'CONFIG_PACKAGE_aiqosd=y' >> .config
           echo 'CONFIG_PACKAGE_luci-app-aiqos=y' >> .config
-          make defconfig
+          # make defconfig expands defaults; tolerate kconfig warnings from QModem feed
+          make defconfig || true
+          # QModem feed ndisc6/rdisc6 have self-select recursive kconfig bugs
+          # that can drop the target device symbol. Force re-add if missing.
+          if ! grep -q "hiveton_h5000m" .config; then
+            echo "Target dropped, re-adding..."
+            sed -i '/^CONFIG_TARGET_mediatek/d' .config
+            echo 'CONFIG_TARGET_mediatek=y' >> .config
+            echo 'CONFIG_TARGET_mediatek_filogic=y' >> .config
+            echo 'CONFIG_TARGET_mediatek_filogic_DEVICE_hiveton_h5000m=y' >> .config
+            make defconfig || true
+          fi
           echo "=== Verify H5000M selected ==="
           grep "hiveton_h5000m" .config
 
