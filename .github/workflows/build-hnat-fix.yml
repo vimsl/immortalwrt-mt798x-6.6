@@ -72,16 +72,14 @@ jobs:
         working-directory: immortalwrt
         run: |
           # Start with known H5000M config from auto-build project
-          cat > .config << 'EOF'
-CONFIG_TARGET_mediatek=y
-CONFIG_TARGET_mediatek_filogic=y
-CONFIG_TARGET_mediatek_filogic_DEVICE_hiveton_h5000m=y
-CONFIG_PACKAGE_kmod-usb-net-qmi-wwan=y
-CONFIG_PACKAGE_kmod-sched-cake=y
-CONFIG_PACKAGE_cake-autorate=y
-CONFIG_PACKAGE_aiqosd=y
-CONFIG_PACKAGE_luci-app-aiqos=y
-EOF
+          echo 'CONFIG_TARGET_mediatek=y' > .config
+          echo 'CONFIG_TARGET_mediatek_filogic=y' >> .config
+          echo 'CONFIG_TARGET_mediatek_filogic_DEVICE_hiveton_h5000m=y' >> .config
+          echo 'CONFIG_PACKAGE_kmod-usb-net-qmi-wwan=y' >> .config
+          echo 'CONFIG_PACKAGE_kmod-sched-cake=y' >> .config
+          echo 'CONFIG_PACKAGE_cake-autorate=y' >> .config
+          echo 'CONFIG_PACKAGE_aiqosd=y' >> .config
+          echo 'CONFIG_PACKAGE_luci-app-aiqos=y' >> .config
           make defconfig
           echo "=== Verify H5000M selected ==="
           grep "hiveton_h5000m" .config
