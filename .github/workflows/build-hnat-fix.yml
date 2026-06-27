@@ -91,7 +91,6 @@ jobs:
             echo 'CONFIG_TARGET_mediatek=y' >> .config
             echo 'CONFIG_TARGET_mediatek_filogic=y' >> .config
             echo 'CONFIG_TARGET_mediatek_filogic_DEVICE_hiveton_h5000m=y' >> .config
-            make defconfig || true
           fi
           echo "=== Verify H5000M selected ==="
           grep "hiveton_h5000m" .config
