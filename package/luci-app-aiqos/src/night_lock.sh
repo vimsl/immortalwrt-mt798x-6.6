@@ -145,12 +145,14 @@ scan_cells() {
         return
     fi
     local best_pci="" best_freq="" best_band="" best_sinr=-999
-    echo "$cell_info" | grep "+GTCCINFO:" | while IFS=, read -r rat pci freq band rsrp rsrq sinr; do
+    while IFS=, read -r rat pci freq band rsrp rsrq sinr; do
         sinr=$(echo "$sinr" | sed 's/[^0-9.-]//g')
         if [ -n "$sinr" ] && [ "$(echo "$sinr > $best_sinr" | bc 2>/dev/null)" = "1" ]; then
             best_sinr="$sinr"; best_pci="$pci"; best_freq="$freq"; best_band="$band"
         fi
-    done
+    done <<SCANEOF
+$(echo "$cell_info" | grep "+GTCCINFO:")
+SCANEOF
     if [ -n "$best_pci" ]; then
         log "Best cell: PCI=$best_pci Freq=$best_freq Band=$best_band SINR=$best_sinr"
         echo "$best_pci $best_freq $best_band"
