@@ -39,6 +39,11 @@ jobs:
             https://github.com/padavanonly/immortalwrt-mt798x-6.6 immortalwrt
           cd immortalwrt
 
+          # 9996 and 9999 add unguarded HNAT code that references missing
+          # mtk_hnat/ SDK symbols (NF_HNAT_SKB_CB2, MTK_FE_START_RESET etc.).
+          # Remove them since the proprietary HNAT module source is unavailable.
+          rm -f target/linux/mediatek/patches-6.6/9996-ext-hnat.patch
+          rm -f target/linux/mediatek/patches-6.6/9999-reset.patch
 
           echo "=== Apply HNAT ext-devices usb0 patch ==="
           DTS_FILE=$(find target/linux/mediatek -name "*.dts" | xargs grep -l "hiveton\|h5000m\|H5000M" 2>/dev/null | head -1)
