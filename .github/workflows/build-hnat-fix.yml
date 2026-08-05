@@ -1,4 +1,4 @@
-name: H5000M HNAT Fix (usb0) + AIQoS
+﻿name: H5000M HNAT Fix (usb0) + AIQoS
 
 on:
   workflow_dispatch:
@@ -12,7 +12,7 @@ jobs:
 
     steps:
       - name: Maximize build space
-        uses: easimon/maximize-build-space@master
+        uses: easimon/maximize-build-space@v10
         with:
           root-reserve-mb: 10240
           swap-size-mb: 1024
