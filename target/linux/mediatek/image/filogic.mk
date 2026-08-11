@@ -1691,7 +1691,7 @@ define Device/netcore_n60-pro
   BLOCKSIZE := 128k
   PAGESIZE := 2048
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
-  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7986-firmware mt7986-wo-firmware kmod-usb3 automount
+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7986-firmware mt7986-wo-firmware kmod-usb3 automount kmod-usb-ledtrig-usbport
 endef
 TARGET_DEVICES += netcore_n60-pro
 
@@ -1779,6 +1779,19 @@ define Device/nokia_ea0326gmp
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
 TARGET_DEVICES += nokia_ea0326gmp
+
+define Device/nradio_c8-668gl
+  DEVICE_VENDOR := NRadio
+  DEVICE_MODEL := C8-668GL
+  DEVICE_DTS := mt7981b-nradio-c8-668gl
+  DEVICE_DTS_DIR := ../dts
+  DEVICE_PACKAGES :=  \
+	kmod-usb-serial-option kmod-usb-net-cdc-ether kmod-usb-net-qmi-wwan \
+	kmod-usb3 automount
+  IMAGE_SIZE := 131072k
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata | check-size
+endef
+TARGET_DEVICES += nradio_c8-668gl
 
 define Device/openembed_som7981
   DEVICE_VENDOR := OpenEmbed
